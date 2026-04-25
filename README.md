@@ -1,4 +1,4 @@
-```markdown
+
 # codex_auto_register
 
 Набор инструментов для автоматической регистрации ChatGPT / Codex и генерации OAuth токенов на базе DuckMail.
