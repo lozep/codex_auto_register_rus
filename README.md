@@ -1,96 +1,97 @@
+```markdown
 # codex_auto_register
 
-基于 DuckMail 的 ChatGPT / Codex 自动注册与 OAuth Token 生成工具集。
+Набор инструментов для автоматической регистрации ChatGPT / Codex и генерации OAuth токенов на базе DuckMail.
 
-## 致谢
+## Благодарности
 
-本项目基于原项目 https://github.com/adminlove520/chatgpt_register 改造而来。
+Этот проект основан на базе оригинального репозитория https://github.com/adminlove520/chatgpt_register.
 
-当前仓库的主要差异：
+Основные отличия текущего репозитория:
 
-- 将注册codex邮箱服务从原先方案替换为 DuckMail API
-- 保留并扩展 Codex 协议 OAuth 流程
-- 输出 CLIProxyAPI v6 可识别的 Codex auth files
+- Сервис почты для регистрации codex заменен с оригинального решения на DuckMail API.
+- Сохранен и расширен процесс OAuth по протоколу Codex.
+- Вывод файлов авторизации Codex, распознаваемых CLIProxyAPI v6.
 
-## 包含内容
+## Состав проекта
 
-- `chatgpt_register.py`：根目录下的 DuckMail 注册脚本
-- `codex/protocol_keygen.py`：纯 HTTP 的 Codex OAuth 注册与 token 生成脚本
-- `duckmaildoc.md`：DuckMail API 参考文档(https://raw.githubusercontent.com/MoonWeSif/DuckMail/main/public/llm-api-docs.txt)
-- [management.html](https://github.com/router-for-me/Cli-Proxy-API-Management-Center/releases)(自动更新)
+- `chatgpt_register.py`: Скрипт регистрации через DuckMail в корневом каталоге.
+- `codex/protocol_keygen.py`: Скрипт регистрации OAuth и генерации токенов Codex через чистый HTTP.
+- `duckmaildoc.md`: Справочная документация DuckMail API.
+- [management.html](https://github.com/router-for-me/Cli-Proxy-API-Management-Center/releases) (автоматическое обновление).
 
-## 环境依赖
+## Зависимости
 
-根目录脚本：
+Скрипт в корневом каталоге:
 
 ```bash
 pip install curl_cffi
 ```
 
-Codex 脚本：
+Скрипт Codex:
 
 ```bash
 pip install requests urllib3
 ```
 
-## 配置方式
+## Настройка
 
-仓库只提交示例配置，不提交真实配置。
+В репозитории представлены только примеры конфигурации, реальные данные не публикуются.
 
-使用前复制：
+Перед использованием скопируйте файлы:
 
 ```bash
 copy config.example.json config.json
 copy codex\config.example.json codex\config.json
 ```
 
-然后把你自己的 DuckMail、代理和 CPA 参数填进去。
+Затем впишите свои параметры DuckMail, прокси и CPA.
 
-## 根目录脚本
+## Скрипт в корневом каталоге
 
-运行：
+Запуск:
 
 ```bash
 python chatgpt_register.py
 ```
 
-对应示例配置见 `config.example.json`。
+Пример конфигурации находится в `config.example.json`.
 
-主要配置项：
+Основные параметры:
 
-| 配置项            | 说明                     |
-| ----------------- | ------------------------ |
-| total_accounts    | 注册账号数量             |
-| duckmail_api_base | DuckMail API 地址        |
-| duckmail_bearer   | DuckMail Bearer Token    |
-| proxy             | HTTP/HTTPS 代理          |
-| output_file       | 注册结果输出文件         |
-| enable_oauth      | 是否执行 OAuth           |
-| oauth_required    | 是否要求 OAuth 成功      |
-| upload_api_url    | 可选，上传到 CPA 的接口  |
-| upload_api_token  | 可选，CPA 管理接口 Token |
+| Параметр          | Описание                         |
+| ----------------- | -------------------------------- |
+| total_accounts    | Количество аккаунтов для регистрации |
+| duckmail_api_base | Адрес DuckMail API               |
+| duckmail_bearer   | Токен Bearer для DuckMail        |
+| proxy             | HTTP/HTTPS прокси                |
+| output_file       | Файл с результатами регистрации  |
+| enable_oauth      | Выполнять ли OAuth               |
+| oauth_required    | Обязателен ли успешный OAuth     |
+| upload_api_url    | Опционально: URL для загрузки в CPA |
+| upload_api_token  | Опционально: Токен API управления CPA |
 
-## Codex 协议脚本
+## Скрипт протокола Codex
 
-运行：
+Запуск:
 
 ```bash
 python codex\protocol_keygen.py
 ```
 
-对应示例配置见 `codex/config.example.json`。
+Пример конфигурации находится в `codex/config.example.json`.
 
-该脚本会：
+Этот скрипт:
 
-- 使用 DuckMail 创建临时邮箱
-- 完成 ChatGPT 注册流程
-- 执行 Codex OAuth 登录并换取 token
-- 生成 CLIProxyAPI v6 兼容文件名的 token JSON
-- 可选上传到 CPA 管理接口
+- Создает временную почту через DuckMail.
+- Завершает процесс регистрации ChatGPT.
+- Выполняет вход через Codex OAuth для получения токенов.
+- Генерирует JSON-файлы токенов с именами, совместимыми с CLIProxyAPI v6.
+- По желанию загружает данные в интерфейс управления CPA.
 
-## 输出说明
+## Описание вывода
 
-运行过程中通常会生成以下本地文件，这些都已加入 `.gitignore`，不会进入新仓库：
+В процессе работы обычно создаются следующие локальные файлы (они добавлены в `.gitignore` и не попадут в репозиторий):
 
 - `config.json`
 - `codex/config.json`
@@ -102,7 +103,7 @@ python codex\protocol_keygen.py
 - `codex/codex_tokens/`
 - `codex/codex_accounts_tokens/`
 
-## 仓库结构
+## Структура репозитория
 
 ```text
 chatgpt_register/
@@ -116,8 +117,9 @@ chatgpt_register/
     └── README.md
 ```
 
-## 说明
+## Примечания
 
-- 需要可用代理，否则注册、OAuth 和 CPA 自动刷新都会失败
-- `config.json` 与 `codex/config.json` 仅保留在本地使用，不应提交
-- 如果你使用 CLIProxyAPI，建议保持 `refresh_token` 与 token JSON 文件完整保存
+- Необходимы рабочие прокси, иначе регистрация, OAuth и автообновление CPA завершатся ошибкой.
+- `config.json` и `codex/config.json` предназначены только для локального использования и не должны отправляться в репозиторий.
+- Если вы используете CLIProxyAPI, рекомендуется сохранять `refresh_token` и JSON-файлы токенов полностью.
+```
