@@ -1,9 +1,3 @@
-"""
-ChatGPT 批量自动注册工具 (并发版) - DuckMail 临时邮箱版
-依赖: pip install curl_cffi
-功能: 使用 DuckMail 临时邮箱，并发自动注册 ChatGPT 账号，自动获取 OTP 验证码
-"""
-
 import os
 import re
 import uuid
@@ -24,7 +18,7 @@ from curl_cffi import requests as curl_requests
 
 # ================= 加载配置 =================
 def _load_config():
-    """从 config.json 加载配置，环境变量优先级更高"""
+    """Загрузка конфигурации из config.json, приоритет у переменных окружения"""
     config = {
         "total_accounts": 3,
         "duckmail_api_base": "https://api.duckmail.sbs",
@@ -50,9 +44,9 @@ def _load_config():
                 file_config = json.load(f)
                 config.update(file_config)
         except Exception as e:
-            print(f"⚠️ 加载 config.json 失败: {e}")
+            print(f"⚠️ Ошибка загрузки config.json: {e}")
 
-    # 环境变量优先级更高
+    # Переменные окружения имеют более высокий приоритет
     config["duckmail_api_base"] = os.environ.get("DUCKMAIL_API_BASE", config["duckmail_api_base"])
     config["duckmail_bearer"] = os.environ.get("DUCKMAIL_BEARER", config["duckmail_bearer"])
     config["proxy"] = os.environ.get("PROXY", config["proxy"])
@@ -97,16 +91,16 @@ UPLOAD_API_URL = _CONFIG["upload_api_url"]
 UPLOAD_API_TOKEN = _CONFIG["upload_api_token"]
 
 if not DUCKMAIL_BEARER:
-    print("⚠️ 警告: 未设置 DUCKMAIL_BEARER，请在 config.json 中设置或设置环境变量")
-    print("   文件: config.json -> duckmail_bearer")
-    print("   环境变量: export DUCKMAIL_BEARER='your_api_key_here'")
+    print("⚠️ Внимание: DUCKMAIL_BEARER не установлен. Настройте его в config.json или через переменные окружения.")
+    print("   Файл: config.json -> duckmail_bearer")
+    print("   Окружение: export DUCKMAIL_BEARER='ваш_ключ'")
 
-# 全局线程锁
+# Глобальные блокировки потоков
 _print_lock = threading.Lock()
 _file_lock = threading.Lock()
 
 
-# Chrome 指纹配置: impersonate 与 sec-ch-ua 必须匹配真实浏览器
+# Конфигурации отпечатков Chrome
 _CHROME_PROFILES = [
     {
         "major": 131, "impersonate": "chrome131",
@@ -164,7 +158,7 @@ def _generate_pkce():
 
 
 class SentinelTokenGenerator:
-    """纯 Python 版本 sentinel token 生成器（PoW）"""
+    """Генератор токенов Sentinel на чистом Python (PoW)"""
 
     MAX_ATTEMPTS = 500000
     ERROR_PREFIX = "wQ8Lk5FbGpA2NcR9dShT6gYjU7VxZ4D"
@@ -421,13 +415,13 @@ def _save_codex_tokens(email: str, tokens: dict):
         with open(token_path, "w", encoding="utf-8") as f:
             json.dump(token_data, f, ensure_ascii=False)
 
-    # 上传到 CPA 管理平台
+    # Загрузка на платформу управления CPA
     if UPLOAD_API_URL:
         _upload_token_json(token_path)
 
 
 def _upload_token_json(filepath):
-    """上传 Token JSON 文件到 CPA 管理平台"""
+    """Загрузка Token JSON файла на платформу управления CPA"""
     mp = None
     try:
         from curl_cffi import CurlMime
@@ -455,13 +449,13 @@ def _upload_token_json(filepath):
 
         if resp.status_code == 200:
             with _print_lock:
-                print(f"  [CPA] Token JSON 已上传到 CPA 管理平台")
+                print(f"  [CPA] Token JSON загружен на платформу CPA")
         else:
             with _print_lock:
-                print(f"  [CPA] 上传失败: {resp.status_code} - {resp.text[:200]}")
+                print(f"  [CPA] Ошибка загрузки: {resp.status_code} - {resp.text[:200]}")
     except Exception as e:
         with _print_lock:
-            print(f"  [CPA] 上传异常: {e}")
+            print(f"  [CPA] Исключение при загрузке: {e}")
     finally:
         if mp:
             mp.close()
@@ -480,10 +474,10 @@ def _generate_password(length=14):
     return "".join(pwd)
 
 
-# ================= DuckMail 邮箱函数 =================
+# ================= Функции почты DuckMail =================
 
 def _create_duckmail_session():
-    """创建带重试的 DuckMail 请求会话"""
+    """Создание сессии DuckMail с повторными попытками"""
     session = curl_requests.Session()
     session.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -494,11 +488,11 @@ def _create_duckmail_session():
 
 
 def create_temp_email():
-    """创建 DuckMail 临时邮箱，返回 (email, password, mail_token)"""
+    """Создание временной почты DuckMail, возвращает (email, password, mail_token)"""
     if not DUCKMAIL_BEARER:
-        raise Exception("DUCKMAIL_BEARER 未设置，无法创建临时邮箱")
+        raise Exception("DUCKMAIL_BEARER не установлен, невозможно создать почту")
 
-    # 生成随机邮箱前缀 8-13 位
+    # Генерация случайного префикса 8-13 символов
     chars = string.ascii_lowercase + string.digits
     length = random.randint(8, 13)
     email_local = "".join(random.choice(chars) for _ in range(length))
@@ -510,7 +504,7 @@ def create_temp_email():
     session = _create_duckmail_session()
 
     try:
-        # 1. 创建账号
+        # 1. Создание аккаунта
         payload = {"address": email, "password": password}
         res = session.post(
             f"{api_base}/accounts",
@@ -521,9 +515,9 @@ def create_temp_email():
         )
 
         if res.status_code not in [200, 201]:
-            raise Exception(f"创建邮箱失败: {res.status_code} - {res.text[:200]}")
+            raise Exception(f"Ошибка создания почты: {res.status_code} - {res.text[:200]}")
 
-        # 2. 获取 Token（用于读取邮件）
+        # 2. Получение токена (для чтения писем)
         time.sleep(0.5)
         token_payload = {"address": email, "password": password}
         token_res = session.post(
@@ -539,14 +533,14 @@ def create_temp_email():
             if mail_token:
                 return email, password, mail_token
 
-        raise Exception(f"获取邮件 Token 失败: {token_res.status_code}")
+        raise Exception(f"Ошибка получения токена почты: {token_res.status_code}")
 
     except Exception as e:
-        raise Exception(f"DuckMail 创建邮箱失败: {e}")
+        raise Exception(f"DuckMail: ошибка создания почты: {e}")
 
 
 def _fetch_emails_duckmail(mail_token: str):
-    """从 DuckMail 获取邮件列表"""
+    """Получение списка писем из DuckMail"""
     try:
         api_base = DUCKMAIL_API_BASE.rstrip("/")
         headers = {"Authorization": f"Bearer {mail_token}"}
@@ -561,7 +555,6 @@ def _fetch_emails_duckmail(mail_token: str):
 
         if res.status_code == 200:
             data = res.json()
-            # DuckMail API 返回格式可能是 hydra:member 或 member
             messages = data.get("hydra:member") or data.get("member") or data.get("data") or []
             return messages
         return []
@@ -570,13 +563,12 @@ def _fetch_emails_duckmail(mail_token: str):
 
 
 def _fetch_email_detail_duckmail(mail_token: str, msg_id: str):
-    """获取 DuckMail 单封邮件详情"""
+    """Получение деталей одного письма из DuckMail"""
     try:
         api_base = DUCKMAIL_API_BASE.rstrip("/")
         headers = {"Authorization": f"Bearer {mail_token}"}
         session = _create_duckmail_session()
 
-        # 处理 msg_id 格式
         if isinstance(msg_id, str) and msg_id.startswith("/messages/"):
             msg_id = msg_id.split("/")[-1]
 
@@ -595,7 +587,7 @@ def _fetch_email_detail_duckmail(mail_token: str, msg_id: str):
 
 
 def _extract_verification_code(email_content: str):
-    """从邮件内容提取 6 位验证码"""
+    """Извлечение 6-значного кода подтверждения из контента письма"""
     if not email_content:
         return None
 
@@ -611,27 +603,25 @@ def _extract_verification_code(email_content: str):
     for pattern in patterns:
         matches = re.findall(pattern, email_content, re.IGNORECASE)
         for code in matches:
-            if code == "177010":  # 已知误判
+            if code == "177010":  # Известное ложное срабатывание
                 continue
             return code
     return None
 
 
 def wait_for_verification_email(mail_token: str, timeout: int = 120):
-    """等待并提取 OpenAI 验证码"""
+    """Ожидание и извлечение кода подтверждения OpenAI"""
     start_time = time.time()
 
     while time.time() - start_time < timeout:
         messages = _fetch_emails_duckmail(mail_token)
         if messages and len(messages) > 0:
-            # 获取最新邮件详情
             first_msg = messages[0]
             msg_id = first_msg.get("id") or first_msg.get("@id")
 
             if msg_id:
                 detail = _fetch_email_detail_duckmail(mail_token, msg_id)
                 if detail:
-                    # DuckMail 的邮件内容在 text 或 html 字段
                     content = detail.get("text") or detail.get("html") or ""
                     code = _extract_verification_code(content)
                     if code:
@@ -670,7 +660,7 @@ class ChatGPTRegister:
     AUTH = "https://auth.openai.com"
 
     def __init__(self, proxy: str = None, tag: str = ""):
-        self.tag = tag  # 线程标识，用于日志
+        self.tag = tag  # Идентификатор потока для логов
         self.device_id = str(uuid.uuid4())
         self.auth_session_logging_id = str(uuid.uuid4())
         self.impersonate, self.chrome_major, self.chrome_full, self.ua, self.sec_ch_ua = _random_chrome_version()
@@ -701,15 +691,15 @@ class ChatGPTRegister:
         prefix = f"[{self.tag}] " if self.tag else ""
         lines = [
             f"\n{'='*60}",
-            f"{prefix}[Step] {step}",
+            f"{prefix}[Шаг] {step}",
             f"{prefix}[{method}] {url}",
-            f"{prefix}[Status] {status}",
+            f"{prefix}[Статус] {status}",
         ]
         if body:
             try:
-                lines.append(f"{prefix}[Response] {json.dumps(body, indent=2, ensure_ascii=False)[:1000]}")
+                lines.append(f"{prefix}[Ответ] {json.dumps(body, indent=2, ensure_ascii=False)[:1000]}")
             except Exception:
-                lines.append(f"{prefix}[Response] {str(body)[:1000]}")
+                lines.append(f"{prefix}[Ответ] {str(body)[:1000]}")
         lines.append(f"{'='*60}")
         with _print_lock:
             print("\n".join(lines))
@@ -719,10 +709,10 @@ class ChatGPTRegister:
         with _print_lock:
             print(f"{prefix}{msg}")
 
-    # ==================== DuckMail 临时邮箱 ====================
+    # ==================== DuckMail временная почта ====================
 
     def _create_duckmail_session(self):
-        """创建带重试的 DuckMail 请求会话"""
+        """Создание сессии DuckMail с повторными попытками"""
         session = curl_requests.Session()
         session.headers.update({
             "User-Agent": self.ua,
@@ -734,11 +724,10 @@ class ChatGPTRegister:
         return session
 
     def create_temp_email(self):
-        """创建 DuckMail 临时邮箱，返回 (email, password, mail_token)"""
+        """Создание временной почты DuckMail, возвращает (email, password, mail_token)"""
         if not DUCKMAIL_BEARER:
-            raise Exception("DUCKMAIL_BEARER 未设置，无法创建临时邮箱")
+            raise Exception("DUCKMAIL_BEARER не установлен, невозможно создать почту")
 
-        # 生成随机邮箱前缀 8-13 位
         chars = string.ascii_lowercase + string.digits
         length = random.randint(8, 13)
         email_local = "".join(random.choice(chars) for _ in range(length))
@@ -750,7 +739,7 @@ class ChatGPTRegister:
         session = self._create_duckmail_session()
 
         try:
-            # 1. 创建账号
+            # 1. Создание аккаунта
             payload = {"address": email, "password": password}
             res = session.post(
                 f"{api_base}/accounts",
@@ -761,9 +750,9 @@ class ChatGPTRegister:
             )
 
             if res.status_code not in [200, 201]:
-                raise Exception(f"创建邮箱失败: {res.status_code} - {res.text[:200]}")
+                raise Exception(f"Ошибка создания почты: {res.status_code} - {res.text[:200]}")
 
-            # 2. 获取 Token（用于读取邮件）
+            # 2. Получение токена
             time.sleep(0.5)
             token_payload = {"address": email, "password": password}
             token_res = session.post(
@@ -779,13 +768,13 @@ class ChatGPTRegister:
                 if mail_token:
                     return email, password, mail_token
 
-            raise Exception(f"获取邮件 Token 失败: {token_res.status_code}")
+            raise Exception(f"Ошибка получения токена почты: {token_res.status_code}")
 
         except Exception as e:
-            raise Exception(f"DuckMail 创建邮箱失败: {e}")
+            raise Exception(f"DuckMail: ошибка создания почты: {e}")
 
     def _fetch_emails_duckmail(self, mail_token: str):
-        """从 DuckMail 获取邮件列表"""
+        """Получение списка писем"""
         try:
             api_base = DUCKMAIL_API_BASE.rstrip("/")
             headers = {"Authorization": f"Bearer {mail_token}"}
@@ -807,7 +796,7 @@ class ChatGPTRegister:
             return []
 
     def _fetch_email_detail_duckmail(self, mail_token: str, msg_id: str):
-        """获取 DuckMail 单封邮件详情"""
+        """Получение деталей письма"""
         try:
             api_base = DUCKMAIL_API_BASE.rstrip("/")
             headers = {"Authorization": f"Bearer {mail_token}"}
@@ -830,7 +819,7 @@ class ChatGPTRegister:
         return None
 
     def _extract_verification_code(self, email_content: str):
-        """从邮件内容提取 6 位验证码"""
+        """Извлечение 6-значного кода"""
         if not email_content:
             return None
 
@@ -846,14 +835,14 @@ class ChatGPTRegister:
         for pattern in patterns:
             matches = re.findall(pattern, email_content, re.IGNORECASE)
             for code in matches:
-                if code == "177010":  # 已知误判
+                if code == "177010":
                     continue
                 return code
         return None
 
     def wait_for_verification_email(self, mail_token: str, timeout: int = 120):
-        """等待并提取 OpenAI 验证码"""
-        self._print(f"[OTP] 等待验证码邮件 (最多 {timeout}s)...")
+        """Ожидание кода подтверждения OpenAI"""
+        self._print(f"[OTP] Ожидание письма с кодом (макс {timeout} сек)...")
         start_time = time.time()
 
         while time.time() - start_time < timeout:
@@ -868,17 +857,17 @@ class ChatGPTRegister:
                         content = detail.get("text") or detail.get("html") or ""
                         code = self._extract_verification_code(content)
                         if code:
-                            self._print(f"[OTP] 验证码: {code}")
+                            self._print(f"[OTP] Код: {code}")
                             return code
 
             elapsed = int(time.time() - start_time)
-            self._print(f"[OTP] 等待中... ({elapsed}s/{timeout}s)")
+            self._print(f"[OTP] Ожидание... ({elapsed}с/{timeout}с)")
             time.sleep(3)
 
-        self._print(f"[OTP] 超时 ({timeout}s)")
+        self._print(f"[OTP] Таймаут ({timeout}с)")
         return None
 
-    # ==================== 注册流程 ====================
+    # ==================== Процесс регистрации ====================
 
     def visit_homepage(self):
         url = f"{self.BASE}/"
@@ -886,7 +875,7 @@ class ChatGPTRegister:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Upgrade-Insecure-Requests": "1",
         }, allow_redirects=True)
-        self._log("0. Visit homepage", "GET", url, r.status_code,
+        self._log("0. Визит на главную", "GET", url, r.status_code,
                    {"cookies_count": len(self.session.cookies)})
 
     def get_csrf(self) -> str:
@@ -894,9 +883,9 @@ class ChatGPTRegister:
         r = self.session.get(url, headers={"Accept": "application/json", "Referer": f"{self.BASE}/"})
         data = r.json()
         token = data.get("csrfToken", "")
-        self._log("1. Get CSRF", "GET", url, r.status_code, data)
+        self._log("1. Получение CSRF", "GET", url, r.status_code, data)
         if not token:
-            raise Exception("Failed to get CSRF token")
+            raise Exception("Ошибка получения токена CSRF")
         return token
 
     def signin(self, email: str, csrf: str) -> str:
@@ -913,9 +902,9 @@ class ChatGPTRegister:
         })
         data = r.json()
         authorize_url = data.get("url", "")
-        self._log("2. Signin", "POST", url, r.status_code, data)
+        self._log("2. Авторизация (signin)", "POST", url, r.status_code, data)
         if not authorize_url:
-            raise Exception("Failed to get authorize URL")
+            raise Exception("Ошибка получения URL авторизации")
         return authorize_url
 
     def authorize(self, url: str) -> str:
@@ -924,7 +913,7 @@ class ChatGPTRegister:
             "Referer": f"{self.BASE}/", "Upgrade-Insecure-Requests": "1",
         }, allow_redirects=True)
         final_url = str(r.url)
-        self._log("3. Authorize", "GET", url, r.status_code, {"final_url": final_url})
+        self._log("3. Переход по URL авторизации", "GET", url, r.status_code, {"final_url": final_url})
         return final_url
 
     def register(self, email: str, password: str):
@@ -935,7 +924,7 @@ class ChatGPTRegister:
         r = self.session.post(url, json={"username": email, "password": password}, headers=headers)
         try: data = r.json()
         except Exception: data = {"text": r.text[:500]}
-        self._log("4. Register", "POST", url, r.status_code, data)
+        self._log("4. Регистрация", "POST", url, r.status_code, data)
         return r.status_code, data
 
     def send_otp(self):
@@ -946,7 +935,7 @@ class ChatGPTRegister:
         }, allow_redirects=True)
         try: data = r.json()
         except Exception: data = {"final_url": str(r.url), "status": r.status_code}
-        self._log("5. Send OTP", "GET", url, r.status_code, data)
+        self._log("5. Отправка OTP", "GET", url, r.status_code, data)
         return r.status_code, data
 
     def validate_otp(self, code: str):
@@ -957,7 +946,7 @@ class ChatGPTRegister:
         r = self.session.post(url, json={"code": code}, headers=headers)
         try: data = r.json()
         except Exception: data = {"text": r.text[:500]}
-        self._log("6. Validate OTP", "POST", url, r.status_code, data)
+        self._log("6. Проверка OTP", "POST", url, r.status_code, data)
         return r.status_code, data
 
     def create_account(self, name: str, birthdate: str):
@@ -968,7 +957,7 @@ class ChatGPTRegister:
         r = self.session.post(url, json={"name": name, "birthdate": birthdate}, headers=headers)
         try: data = r.json()
         except Exception: data = {"text": r.text[:500]}
-        self._log("7. Create Account", "POST", url, r.status_code, data)
+        self._log("7. Завершение создания аккаунта", "POST", url, r.status_code, data)
         if isinstance(data, dict):
             cb = data.get("continue_url") or data.get("url") or data.get("redirect_url")
             if cb:
@@ -979,7 +968,7 @@ class ChatGPTRegister:
         if not url:
             url = self._callback_url
         if not url:
-            self._print("[!] No callback URL, skipping.")
+            self._print("[!] Нет URL обратного вызова, пропуск.")
             return None, None
         r = self.session.get(url, headers={
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -988,10 +977,10 @@ class ChatGPTRegister:
         self._log("8. Callback", "GET", url, r.status_code, {"final_url": str(r.url)})
         return r.status_code, {"final_url": str(r.url)}
 
-    # ==================== 自动注册主流程 ====================
+    # ==================== Основной процесс авторегистрации ====================
 
     def run_register(self, email, password, name, birthdate, mail_token):
-        """使用 DuckMail 的注册流程"""
+        """Процесс регистрации с использованием DuckMail"""
         self.visit_homepage()
         _random_delay(0.3, 0.8)
         csrf = self.get_csrf()
@@ -1003,64 +992,61 @@ class ChatGPTRegister:
         final_path = urlparse(final_url).path
         _random_delay(0.3, 0.8)
 
-        self._print(f"Authorize → {final_path}")
+        self._print(f"Авторизация → {final_path}")
 
         need_otp = False
 
         if "create-account/password" in final_path:
-            self._print("全新注册流程")
+            self._print("Новый процесс регистрации")
             _random_delay(0.5, 1.0)
             status, data = self.register(email, password)
             if status != 200:
-                raise Exception(f"Register 失败 ({status}): {data}")
-            # register 之后可能还需要 send_otp（全新注册流程中 OTP 不一定在 authorize 时发送）
+                raise Exception(f"Ошибка регистрации ({status}): {data}")
             _random_delay(0.3, 0.8)
             self.send_otp()
             need_otp = True
         elif "email-verification" in final_path or "email-otp" in final_path:
-            self._print("跳到 OTP 验证阶段 (authorize 已触发 OTP，不再重复发送)")
-            # 不调用 send_otp()，因为 authorize 重定向到 email-verification 时服务器已发送 OTP
+            self._print("Переход к этапу проверки OTP (OTP уже отправлен)")
             need_otp = True
         elif "about-you" in final_path:
-            self._print("跳到填写信息阶段")
+            self._print("Переход к заполнению информации")
             _random_delay(0.5, 1.0)
             self.create_account(name, birthdate)
             _random_delay(0.3, 0.5)
             self.callback()
             return True
         elif "callback" in final_path or "chatgpt.com" in final_url:
-            self._print("账号已完成注册")
+            self._print("Аккаунт уже зарегистрирован")
             return True
         else:
-            self._print(f"未知跳转: {final_url}")
+            self._print(f"Неизвестный переход: {final_url}")
             self.register(email, password)
             self.send_otp()
             need_otp = True
 
         if need_otp:
-            # 使用 DuckMail 等待验证码
             otp_code = self.wait_for_verification_email(mail_token)
             if not otp_code:
-                raise Exception("未能获取验证码")
+                raise Exception("Не удалось получить код подтверждения")
 
             _random_delay(0.3, 0.8)
             status, data = self.validate_otp(otp_code)
             if status != 200:
-                self._print("验证码失败，重试...")
+                self._print("Ошибка кода, повторная попытка...")
                 self.send_otp()
                 _random_delay(1.0, 2.0)
                 otp_code = self.wait_for_verification_email(mail_token, timeout=60)
                 if not otp_code:
-                    raise Exception("重试后仍未获取验证码")
+                    raise Exception("Код не получен после повторной попытки")
                 _random_delay(0.3, 0.8)
                 status, data = self.validate_otp(otp_code)
                 if status != 200:
-                    raise Exception(f"验证码失败 ({status}): {data}")
+                    raise Exception(f"Ошибка кода подтверждения ({status}): {data}")
 
         _random_delay(0.5, 1.5)
         status, data = self.create_account(name, birthdate)
         if status != 200:
-            raise Exception(f"Create account 失败 ({status}): {data}")
+            raise Exception(f"Ошибка создания аккаунта ({status}): {data}")
         _random_delay(0.2, 0.5)
         self.callback()
         return True
@@ -1128,27 +1114,27 @@ class ChatGPTRegister:
             final_url = str(resp.url)
             code = _extract_code_from_url(final_url)
             if code:
-                self._print("[OAuth] allow_redirect 命中最终 URL code")
+                self._print("[OAuth] Код найден в конечном URL (allow_redirect)")
                 return code
 
             for r in getattr(resp, "history", []) or []:
                 loc = r.headers.get("Location", "")
                 code = _extract_code_from_url(loc)
                 if code:
-                    self._print("[OAuth] allow_redirect 命中 history Location code")
+                    self._print("[OAuth] Код найден в Location истории")
                     return code
                 code = _extract_code_from_url(str(r.url))
                 if code:
-                    self._print("[OAuth] allow_redirect 命中 history URL code")
+                    self._print("[OAuth] Код найден в URL истории")
                     return code
         except Exception as e:
             maybe_localhost = re.search(r'(https?://localhost[^\s\'\"]+)', str(e))
             if maybe_localhost:
                 code = _extract_code_from_url(maybe_localhost.group(1))
                 if code:
-                    self._print("[OAuth] allow_redirect 从 localhost 异常提取 code")
+                    self._print("[OAuth] Код извлечен из исключения localhost")
                     return code
-            self._print(f"[OAuth] allow_redirect 异常: {e}")
+            self._print(f"[OAuth] Исключение allow_redirect: {e}")
 
         return None
 
@@ -1178,13 +1164,13 @@ class ChatGPTRegister:
                 if maybe_localhost:
                     code = _extract_code_from_url(maybe_localhost.group(1))
                     if code:
-                        self._print(f"[OAuth] follow[{hop + 1}] 命中 localhost 回调")
+                        self._print(f"[OAuth] Переход[{hop + 1}]: попадание в localhost")
                         return code, maybe_localhost.group(1)
-                self._print(f"[OAuth] follow[{hop + 1}] 请求异常: {e}")
+                self._print(f"[OAuth] Переход[{hop + 1}]: ошибка запроса: {e}")
                 return None, last_url
 
             last_url = str(resp.url)
-            self._print(f"[OAuth] follow[{hop + 1}] {resp.status_code} {last_url[:140]}")
+            self._print(f"[OAuth] Переход[{hop + 1}] {resp.status_code} {last_url[:140]}")
             code = _extract_code_from_url(last_url)
             if code:
                 return code, last_url
@@ -1214,17 +1200,17 @@ class ChatGPTRegister:
                 cookie_names = [getattr(c, "name", "") for c in list(jar)]
             else:
                 cookie_names = list(self.session.cookies.keys())
-            self._print(f"[OAuth] 无法解码 oai-client-auth-session, cookies={cookie_names[:12]}")
+            self._print(f"[OAuth] Ошибка декодирования oai-client-auth-session, куки={cookie_names[:12]}")
             return None
 
         workspaces = session_data.get("workspaces", [])
         if not workspaces:
-            self._print("[OAuth] session 中没有 workspace 信息")
+            self._print("[OAuth] В сессии нет информации о рабочем пространстве")
             return None
 
         workspace_id = (workspaces[0] or {}).get("id")
         if not workspace_id:
-            self._print("[OAuth] workspace_id 为空")
+            self._print("[OAuth] workspace_id пуст")
             return None
 
         h = {
@@ -1245,7 +1231,7 @@ class ChatGPTRegister:
             timeout=30,
             impersonate=self.impersonate,
         )
-        self._print(f"[OAuth] workspace/select -> {resp.status_code}")
+        self._print(f"[OAuth] Выбор рабочего пространства -> {resp.status_code}")
 
         if resp.status_code in (301, 302, 303, 307, 308):
             loc = resp.headers.get("Location", "")
@@ -1260,19 +1246,19 @@ class ChatGPTRegister:
             return code
 
         if resp.status_code != 200:
-            self._print(f"[OAuth] workspace/select 失败: {resp.status_code}")
+            self._print(f"[OAuth] Ошибка выбора рабочего пространства: {resp.status_code}")
             return None
 
         try:
             ws_data = resp.json()
         except Exception:
-            self._print("[OAuth] workspace/select 响应不是 JSON")
+            self._print("[OAuth] Ответ workspace/select не является JSON")
             return None
 
         ws_next = ws_data.get("continue_url", "")
         orgs = ws_data.get("data", {}).get("orgs", [])
         ws_page = (ws_data.get("page") or {}).get("type", "")
-        self._print(f"[OAuth] workspace/select page={ws_page or '-'} next={(ws_next or '-')[:140]}")
+        self._print(f"[OAuth] Страница выбора: {ws_page or '-'}, след: {(ws_next or '-')[:140]}")
 
         org_id = None
         project_id = None
@@ -1299,7 +1285,7 @@ class ChatGPTRegister:
                 timeout=30,
                 impersonate=self.impersonate,
             )
-            self._print(f"[OAuth] organization/select -> {resp_org.status_code}")
+            self._print(f"[OAuth] Выбор организации -> {resp_org.status_code}")
             if resp_org.status_code in (301, 302, 303, 307, 308):
                 loc = resp_org.headers.get("Location", "")
                 if loc.startswith("/"):
@@ -1316,12 +1302,12 @@ class ChatGPTRegister:
                 try:
                     org_data = resp_org.json()
                 except Exception:
-                    self._print("[OAuth] organization/select 响应不是 JSON")
+                    self._print("[OAuth] Ответ organization/select не является JSON")
                     return None
 
                 org_next = org_data.get("continue_url", "")
                 org_page = (org_data.get("page") or {}).get("type", "")
-                self._print(f"[OAuth] organization/select page={org_page or '-'} next={(org_next or '-')[:140]}")
+                self._print(f"[OAuth] Страница организации: {org_page or '-'}, след: {(org_next or '-')[:140]}")
                 if org_next:
                     if org_next.startswith("/"):
                         org_next = f"{OAUTH_ISSUER}{org_next}"
@@ -1341,9 +1327,8 @@ class ChatGPTRegister:
         return None
 
     def perform_codex_oauth_login_http(self, email: str, password: str, mail_token: str = None):
-        self._print("[OAuth] 开始执行 Codex OAuth 纯协议流程...")
+        self._print("[OAuth] Запуск процесса Codex OAuth по протоколу...")
 
-        # 兼容两种 domain 形式，确保 auth 域也带 oai-did
         self.session.cookies.set("oai-did", self.device_id, domain=".auth.openai.com")
         self.session.cookies.set("oai-did", self.device_id, domain="auth.openai.com")
 
@@ -1389,18 +1374,18 @@ class ChatGPTRegister:
                     impersonate=self.impersonate,
                 )
             except Exception as e:
-                self._print(f"[OAuth] /oauth/authorize 异常: {e}")
+                self._print(f"[OAuth] Ошибка /oauth/authorize: {e}")
                 return False, ""
 
             final_url = str(r.url)
             redirects = len(getattr(r, "history", []) or [])
-            self._print(f"[OAuth] /oauth/authorize -> {r.status_code}, final={(final_url or '-')[:140]}, redirects={redirects}")
+            self._print(f"[OAuth] /oauth/authorize -> {r.status_code}, финал={(final_url or '-')[:140]}, редиректы={redirects}")
 
             has_login = any(getattr(c, "name", "") == "login_session" for c in self.session.cookies)
-            self._print(f"[OAuth] login_session: {'已获取' if has_login else '未获取'}")
+            self._print(f"[OAuth] login_session: {'есть' if has_login else 'нет'}")
 
             if not has_login:
-                self._print("[OAuth] 未拿到 login_session，尝试访问 oauth2 auth 入口")
+                self._print("[OAuth] login_session не получен, попытка через oauth2 auth")
                 oauth2_url = f"{OAUTH_ISSUER}/api/oauth/oauth2/auth"
                 try:
                     r2 = self.session.get(
@@ -1418,12 +1403,12 @@ class ChatGPTRegister:
                     )
                     final_url = str(r2.url)
                     redirects2 = len(getattr(r2, "history", []) or [])
-                    self._print(f"[OAuth] /api/oauth/oauth2/auth -> {r2.status_code}, final={(final_url or '-')[:140]}, redirects={redirects2}")
+                    self._print(f"[OAuth] /api/oauth/oauth2/auth -> {r2.status_code}, финал={(final_url or '-')[:140]}, редиректы={redirects2}")
                 except Exception as e:
-                    self._print(f"[OAuth] /api/oauth/oauth2/auth 异常: {e}")
+                    self._print(f"[OAuth] Ошибка /api/oauth/oauth2/auth: {e}")
 
                 has_login = any(getattr(c, "name", "") == "login_session" for c in self.session.cookies)
-                self._print(f"[OAuth] login_session(重试): {'已获取' if has_login else '未获取'}")
+                self._print(f"[OAuth] login_session (повтор): {'есть' if has_login else 'нет'}")
 
             return has_login, final_url
 
@@ -1437,7 +1422,7 @@ class ChatGPTRegister:
                 impersonate=self.impersonate,
             )
             if not sentinel_authorize:
-                self._print("[OAuth] authorize_continue 的 sentinel token 获取失败")
+                self._print("[OAuth] Ошибка получения sentinel токена для authorize_continue")
                 return None
 
             headers_continue = _oauth_json_headers(referer_url)
@@ -1453,7 +1438,7 @@ class ChatGPTRegister:
                     impersonate=self.impersonate,
                 )
             except Exception as e:
-                self._print(f"[OAuth] authorize/continue 异常: {e}")
+                self._print(f"[OAuth] Ошибка authorize/continue: {e}")
                 return None
 
         has_login_session, authorize_final_url = _bootstrap_oauth_session()
@@ -1469,7 +1454,7 @@ class ChatGPTRegister:
 
         self._print(f"[OAuth] /authorize/continue -> {resp_continue.status_code}")
         if resp_continue.status_code == 400 and "invalid_auth_step" in (resp_continue.text or ""):
-            self._print("[OAuth] invalid_auth_step，重新 bootstrap 后重试一次")
+            self._print("[OAuth] invalid_auth_step, повторный bootstrap")
             has_login_session, authorize_final_url = _bootstrap_oauth_session()
             if not authorize_final_url:
                 return None
@@ -1477,21 +1462,21 @@ class ChatGPTRegister:
             resp_continue = _post_authorize_continue(continue_referer)
             if resp_continue is None:
                 return None
-            self._print(f"[OAuth] /authorize/continue(重试) -> {resp_continue.status_code}")
+            self._print(f"[OAuth] /authorize/continue (повтор) -> {resp_continue.status_code}")
 
         if resp_continue.status_code != 200:
-            self._print(f"[OAuth] 邮箱提交失败: {resp_continue.text[:180]}")
+            self._print(f"[OAuth] Ошибка отправки почты: {resp_continue.text[:180]}")
             return None
 
         try:
             continue_data = resp_continue.json()
         except Exception:
-            self._print("[OAuth] authorize/continue 响应解析失败")
+            self._print("[OAuth] Ошибка парсинга authorize/continue")
             return None
 
         continue_url = continue_data.get("continue_url", "")
         page_type = (continue_data.get("page") or {}).get("type", "")
-        self._print(f"[OAuth] continue page={page_type or '-'} next={(continue_url or '-')[:140]}")
+        self._print(f"[OAuth] Страница: {page_type or '-'}, след: {(continue_url or '-')[:140]}")
 
         self._print("[OAuth] 3/7 POST /api/accounts/password/verify")
         sentinel_pwd = build_sentinel_token(
@@ -1503,7 +1488,7 @@ class ChatGPTRegister:
             impersonate=self.impersonate,
         )
         if not sentinel_pwd:
-            self._print("[OAuth] password_verify 的 sentinel token 获取失败")
+            self._print("[OAuth] Ошибка получения sentinel токена для password_verify")
             return None
 
         headers_verify = _oauth_json_headers(f"{OAUTH_ISSUER}/log-in/password")
@@ -1519,23 +1504,23 @@ class ChatGPTRegister:
                 impersonate=self.impersonate,
             )
         except Exception as e:
-            self._print(f"[OAuth] password/verify 异常: {e}")
+            self._print(f"[OAuth] Ошибка password/verify: {e}")
             return None
 
         self._print(f"[OAuth] /password/verify -> {resp_verify.status_code}")
         if resp_verify.status_code != 200:
-            self._print(f"[OAuth] 密码校验失败: {resp_verify.text[:180]}")
+            self._print(f"[OAuth] Ошибка проверки пароля: {resp_verify.text[:180]}")
             return None
 
         try:
             verify_data = resp_verify.json()
         except Exception:
-            self._print("[OAuth] password/verify 响应解析失败")
+            self._print("[OAuth] Ошибка парсинга password/verify")
             return None
 
         continue_url = verify_data.get("continue_url", "") or continue_url
         page_type = (verify_data.get("page") or {}).get("type", "") or page_type
-        self._print(f"[OAuth] verify page={page_type or '-'} next={(continue_url or '-')[:140]}")
+        self._print(f"[OAuth] Верификация: {page_type or '-'}, след: {(continue_url or '-')[:140]}")
 
         need_oauth_otp = (
             page_type == "email_otp_verification"
@@ -1544,9 +1529,9 @@ class ChatGPTRegister:
         )
 
         if need_oauth_otp:
-            self._print("[OAuth] 4/7 检测到邮箱 OTP 验证")
+            self._print("[OAuth] 4/7 Обнаружена проверка OTP")
             if not mail_token:
-                self._print("[OAuth] OAuth 阶段需要邮箱 OTP，但未提供 mail_token")
+                self._print("[OAuth] Требуется OTP, но mail_token не предоставлен")
                 return None
 
             headers_otp = _oauth_json_headers(f"{OAUTH_ISSUER}/email-verification")
@@ -1572,13 +1557,13 @@ class ChatGPTRegister:
 
                 if not candidate_codes:
                     elapsed = int(120 - max(0, otp_deadline - time.time()))
-                    self._print(f"[OAuth] OTP 等待中... ({elapsed}s/120s)")
+                    self._print(f"[OAuth] Ожидание OTP... ({elapsed}с/120с)")
                     time.sleep(2)
                     continue
 
                 for otp_code in candidate_codes:
                     tried_codes.add(otp_code)
-                    self._print(f"[OAuth] 尝试 OTP: {otp_code}")
+                    self._print(f"[OAuth] Проверка OTP: {otp_code}")
                     try:
                         resp_otp = self.session.post(
                             f"{OAUTH_ISSUER}/api/accounts/email-otp/validate",
@@ -1589,23 +1574,23 @@ class ChatGPTRegister:
                             impersonate=self.impersonate,
                         )
                     except Exception as e:
-                        self._print(f"[OAuth] email-otp/validate 异常: {e}")
+                        self._print(f"[OAuth] Ошибка email-otp/validate: {e}")
                         continue
 
                     self._print(f"[OAuth] /email-otp/validate -> {resp_otp.status_code}")
                     if resp_otp.status_code != 200:
-                        self._print(f"[OAuth] OTP 无效，继续尝试下一条: {resp_otp.text[:160]}")
+                        self._print(f"[OAuth] OTP не подходит, пробуем следующий: {resp_otp.text[:160]}")
                         continue
 
                     try:
                         otp_data = resp_otp.json()
                     except Exception:
-                        self._print("[OAuth] email-otp/validate 响应解析失败")
+                        self._print("[OAuth] Ошибка парсинга email-otp/validate")
                         continue
 
                     continue_url = otp_data.get("continue_url", "") or continue_url
                     page_type = (otp_data.get("page") or {}).get("type", "") or page_type
-                    self._print(f"[OAuth] OTP 验证通过 page={page_type or '-'} next={(continue_url or '-')[:140]}")
+                    self._print(f"[OAuth] OTP принят. Страница: {page_type or '-'}, след: {(continue_url or '-')[:140]}")
                     otp_success = True
                     break
 
@@ -1613,7 +1598,7 @@ class ChatGPTRegister:
                     time.sleep(2)
 
             if not otp_success:
-                self._print(f"[OAuth] OAuth 阶段 OTP 验证失败，已尝试 {len(tried_codes)} 个验证码")
+                self._print(f"[OAuth] Ошибка проверки OTP. Попробовано кодов: {len(tried_codes)}")
                 return None
 
         code = None
@@ -1628,7 +1613,7 @@ class ChatGPTRegister:
             code = _extract_code_from_url(consent_url)
 
         if not code and consent_url:
-            self._print("[OAuth] 5/7 跟随 continue_url 提取 code")
+            self._print("[OAuth] 5/7 Получение кода через переходы continue_url")
             code, _ = self._oauth_follow_for_code(consent_url, referer=f"{OAUTH_ISSUER}/log-in/password")
 
         consent_hint = (
@@ -1643,18 +1628,18 @@ class ChatGPTRegister:
         if not code and consent_hint:
             if not consent_url:
                 consent_url = f"{OAUTH_ISSUER}/sign-in-with-chatgpt/codex/consent"
-            self._print("[OAuth] 6/7 执行 workspace/org 选择")
+            self._print("[OAuth] 6/7 Выбор рабочего пространства/организации")
             code = self._oauth_submit_workspace_and_org(consent_url)
 
         if not code:
             fallback_consent = f"{OAUTH_ISSUER}/sign-in-with-chatgpt/codex/consent"
-            self._print("[OAuth] 6/7 回退 consent 路径重试")
+            self._print("[OAuth] 6/7 Повторная попытка через запасной путь consent")
             code = self._oauth_submit_workspace_and_org(fallback_consent)
             if not code:
                 code, _ = self._oauth_follow_for_code(fallback_consent, referer=f"{OAUTH_ISSUER}/log-in/password")
 
         if not code:
-            self._print("[OAuth] 未获取到 authorization code")
+            self._print("[OAuth] Код авторизации (authorization code) не получен")
             return None
 
         self._print("[OAuth] 7/7 POST /oauth/token")
@@ -1674,36 +1659,35 @@ class ChatGPTRegister:
         self._print(f"[OAuth] /oauth/token -> {token_resp.status_code}")
 
         if token_resp.status_code != 200:
-            self._print(f"[OAuth] token 交换失败: {token_resp.status_code} {token_resp.text[:200]}")
+            self._print(f"[OAuth] Ошибка обмена кода на токен: {token_resp.status_code} {token_resp.text[:200]}")
             return None
 
         try:
             data = token_resp.json()
         except Exception:
-            self._print("[OAuth] token 响应解析失败")
+            self._print("[OAuth] Ошибка парсинга ответа токена")
             return None
 
         if not data.get("access_token"):
-            self._print("[OAuth] token 响应缺少 access_token")
+            self._print("[OAuth] В ответе отсутствует access_token")
             return None
 
-        self._print("[OAuth] Codex Token 获取成功")
+        self._print("[OAuth] Токен Codex успешно получен")
         return data
 
 
-# ==================== 并发批量注册 ====================
+# ==================== Многопоточная регистрация ====================
 
 def _register_one(idx, total, proxy, output_file):
-    """单个注册任务 (在线程中运行) - 使用 DuckMail 临时邮箱"""
+    """Задача для одного потока — регистрация аккаунта через DuckMail"""
     reg = None
     try:
         reg = ChatGPTRegister(proxy=proxy, tag=f"{idx}")
 
-        # 1. 创建 DuckMail 临时邮箱
-        reg._print("[DuckMail] 创建临时邮箱...")
+        reg._print("[DuckMail] Создание временной почты...")
         email, email_pwd, mail_token = reg.create_temp_email()
         tag = email.split("@")[0]
-        reg.tag = tag  # 更新 tag
+        reg.tag = tag
 
         chatgpt_password = _generate_password()
         name = _random_name()
@@ -1711,68 +1695,61 @@ def _register_one(idx, total, proxy, output_file):
 
         with _print_lock:
             print(f"\n{'='*60}")
-            print(f"  [{idx}/{total}] 注册: {email}")
-            print(f"  ChatGPT密码: {chatgpt_password}")
-            print(f"  邮箱密码: {email_pwd}")
-            print(f"  姓名: {name} | 生日: {birthdate}")
+            print(f"  [{idx}/{total}] Регистрация: {email}")
+            print(f"  Пароль ChatGPT: {chatgpt_password}")
+            print(f"  Пароль почты: {email_pwd}")
+            print(f"  Имя: {name} | Дата рожд: {birthdate}")
             print(f"{'='*60}")
 
-        # 2. 执行注册流程
         reg.run_register(email, chatgpt_password, name, birthdate, mail_token)
 
-        # 3. OAuth（可选）
         oauth_ok = True
         if ENABLE_OAUTH:
-            reg._print("[OAuth] 开始获取 Codex Token...")
+            reg._print("[OAuth] Получение Codex токена...")
             tokens = reg.perform_codex_oauth_login_http(email, chatgpt_password, mail_token=mail_token)
             oauth_ok = bool(tokens and tokens.get("access_token"))
             if oauth_ok:
                 _save_codex_tokens(email, tokens)
-                reg._print("[OAuth] Token 已保存")
+                reg._print("[OAuth] Токены сохранены")
             else:
-                msg = "OAuth 获取失败"
+                msg = "Ошибка OAuth"
                 if OAUTH_REQUIRED:
-                    raise Exception(f"{msg}（oauth_required=true）")
-                reg._print(f"[OAuth] {msg}（按配置继续）")
+                    raise Exception(f"{msg} (oauth_required=true)")
+                reg._print(f"[OAuth] {msg} (продолжаем по настройкам)")
 
-        # 4. 线程安全写入结果
         with _file_lock:
             with open(output_file, "a", encoding="utf-8") as out:
                 out.write(f"{email}----{chatgpt_password}----{email_pwd}----oauth={'ok' if oauth_ok else 'fail'}\n")
 
         with _print_lock:
-            print(f"\n[OK] [{tag}] {email} 注册成功!")
+            print(f"\n[OK] [{tag}] {email} зарегистрирован успешно!")
         return True, email, None
 
     except Exception as e:
         error_msg = str(e)
         with _print_lock:
-            print(f"\n[FAIL] [{idx}] 注册失败: {error_msg}")
+            print(f"\n[FAIL] [{idx}] Ошибка регистрации: {error_msg}")
             traceback.print_exc()
         return False, None, error_msg
 
 
 def run_batch(total_accounts: int = 3, output_file="registered_accounts.txt",
               max_workers=3, proxy=None):
-    """并发批量注册 - DuckMail 临时邮箱版"""
+    """Запуск пакетной регистрации (DuckMail)"""
 
     if not DUCKMAIL_BEARER:
-        print("❌ 错误: 未设置 DUCKMAIL_BEARER 环境变量")
-        print("   请设置: export DUCKMAIL_BEARER='your_api_key_here'")
-        print("   或: set DUCKMAIL_BEARER=your_api_key_here (Windows)")
+        print("❌ Ошибка: переменная окружения DUCKMAIL_BEARER не установлена")
         return
 
     actual_workers = min(max_workers, total_accounts)
     print(f"\n{'#'*60}")
-    print(f"  ChatGPT 批量自动注册 (DuckMail 临时邮箱版)")
-    print(f"  注册数量: {total_accounts} | 并发数: {actual_workers}")
+    print(f"  Инструмент авторегистрации ChatGPT (DuckMail)")
+    print(f"  Аккаунтов: {total_accounts} | Потоков: {actual_workers}")
     print(f"  DuckMail: {DUCKMAIL_API_BASE}")
-    print(f"  OAuth: {'开启' if ENABLE_OAUTH else '关闭'} | required: {'是' if OAUTH_REQUIRED else '否'}")
+    print(f"  OAuth: {'ВКЛ' if ENABLE_OAUTH else 'ВЫКЛ'} | Обязательно: {'Да' if OAUTH_REQUIRED else 'Нет'}")
     if ENABLE_OAUTH:
-        print(f"  OAuth Issuer: {OAUTH_ISSUER}")
-        print(f"  OAuth Client: {OAUTH_CLIENT_ID}")
-        print(f"  Token输出: {TOKEN_JSON_DIR}/, {AK_FILE}, {RK_FILE}")
-    print(f"  输出文件: {output_file}")
+        print(f"  Вывод токенов: {TOKEN_JSON_DIR}/, {AK_FILE}, {RK_FILE}")
+    print(f"  Файл вывода: {output_file}")
     print(f"{'#'*60}\n")
 
     success_count = 0
@@ -1795,67 +1772,62 @@ def run_batch(total_accounts: int = 3, output_file="registered_accounts.txt",
                     success_count += 1
                 else:
                     fail_count += 1
-                    print(f"  [账号 {idx}] 失败: {err}")
+                    print(f"  [Аккаунт {idx}] Ошибка: {err}")
             except Exception as e:
                 fail_count += 1
                 with _print_lock:
-                    print(f"[FAIL] 账号 {idx} 线程异常: {e}")
+                    print(f"[FAIL] Аккаунт {idx} Исключение потока: {e}")
 
     elapsed = time.time() - start_time
     avg = elapsed / total_accounts if total_accounts else 0
     print(f"\n{'#'*60}")
-    print(f"  注册完成! 耗时 {elapsed:.1f} 秒")
-    print(f"  总数: {total_accounts} | 成功: {success_count} | 失败: {fail_count}")
-    print(f"  平均速度: {avg:.1f} 秒/个")
+    print(f"  Регистрация завершена! Время: {elapsed:.1f} сек")
+    print(f"  Всего: {total_accounts} | Успех: {success_count} | Ошибка: {fail_count}")
+    print(f"  Средняя скорость: {avg:.1f} сек/акк")
     if success_count > 0:
-        print(f"  结果文件: {output_file}")
+        print(f"  Результаты в файле: {output_file}")
     print(f"{'#'*60}")
 
 
 def main():
     print("=" * 60)
-    print("  ChatGPT 批量自动注册工具 (DuckMail 临时邮箱版)")
+    print("  Инструмент массовой регистрации ChatGPT (DuckMail)")
     print("=" * 60)
 
-    # 检查 DuckMail 配置
     if not DUCKMAIL_BEARER:
-        print("\n⚠️  警告: 未设置 DUCKMAIL_BEARER")
-        print("   请编辑 config.json 设置 duckmail_bearer，或设置环境变量:")
-        print("   Windows: set DUCKMAIL_BEARER=your_api_key_here")
-        print("   Linux/Mac: export DUCKMAIL_BEARER='your_api_key_here'")
-        print("\n   按 Enter 继续尝试运行 (可能会失败)...")
+        print("\n⚠️ Внимание: DUCKMAIL_BEARER не установлен")
+        print("   Отредактируйте config.json или установите переменную окружения DUCKMAIL_BEARER.")
+        print("\n   Нажмите Enter, чтобы продолжить (может не сработать)...")
         input()
 
-    # 交互式代理配置
     proxy = DEFAULT_PROXY
     if proxy:
-        print(f"[Info] 检测到默认代理: {proxy}")
-        use_default = input("使用此代理? (Y/n): ").strip().lower()
+        print(f"[Инфо] Обнаружен прокси по умолчанию: {proxy}")
+        use_default = input("Использовать этот прокси? (Y/n): ").strip().lower()
         if use_default == "n":
-            proxy = input("输入代理地址 (留空=不使用代理): ").strip() or None
+            proxy = input("Введите адрес прокси (пусто = без прокси): ").strip() or None
     else:
         env_proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") \
                  or os.environ.get("ALL_PROXY") or os.environ.get("all_proxy")
         if env_proxy:
-            print(f"[Info] 检测到环境变量代理: {env_proxy}")
-            use_env = input("使用此代理? (Y/n): ").strip().lower()
+            print(f"[Инфо] Обнаружен прокси в окружении: {env_proxy}")
+            use_env = input("Использовать его? (Y/n): ").strip().lower()
             if use_env == "n":
-                proxy = input("输入代理地址 (留空=不使用代理): ").strip() or None
+                proxy = input("Введите адрес прокси (пусто = без прокси): ").strip() or None
             else:
                 proxy = env_proxy
         else:
-            proxy = input("输入代理地址 (如 http://127.0.0.1:7890，留空=不使用代理): ").strip() or None
+            proxy = input("Введите адрес прокси (напр. http://127.0.0.1:7890, пусто = без прокси): ").strip() or None
 
     if proxy:
-        print(f"[Info] 使用代理: {proxy}")
+        print(f"[Инфо] Используется прокси: {proxy}")
     else:
-        print("[Info] 不使用代理")
+        print("[Инфо] Прокси не используется")
 
-    # 输入注册数量
-    count_input = input(f"\n注册账号数量 (默认 {DEFAULT_TOTAL_ACCOUNTS}): ").strip()
+    count_input = input(f"\nКоличество аккаунтов (по умолчанию {DEFAULT_TOTAL_ACCOUNTS}): ").strip()
     total_accounts = int(count_input) if count_input.isdigit() and int(count_input) > 0 else DEFAULT_TOTAL_ACCOUNTS
 
-    workers_input = input("并发数 (默认 3): ").strip()
+    workers_input = input("Количество потоков (по умолчанию 3): ").strip()
     max_workers = int(workers_input) if workers_input.isdigit() and int(workers_input) > 0 else 3
 
     run_batch(total_accounts=total_accounts, output_file=DEFAULT_OUTPUT_FILE,
