@@ -1,34 +1,35 @@
-# Codex 协议密钥生成工具
+```markdown
+# Инструмент генерации ключей по протоколу Codex
 
-该目录提供基于 DuckMail 的纯 HTTP Codex OAuth 注册与 token 生成脚本。
+В данном каталоге представлены скрипты для регистрации Codex OAuth и генерации токенов через чистый HTTP на базе DuckMail.
 
-## 主要能力
+## Основные возможности
 
-- 纯 HTTP 注册 ChatGPT 账号
-- 通过 DuckMail API 创建邮箱并读取验证码
-- 获取 `access_token`、`refresh_token`、`id_token`
-- 生成 CLIProxyAPI v6 兼容的 token JSON 文件名
-- 可选上传到 CPA 管理接口
+- Регистрация аккаунтов ChatGPT через чистый HTTP
+- Создание почты и чтение кодов подтверждения через DuckMail API
+- Получение `access_token`, `refresh_token`, `id_token`
+- Генерация имен JSON-файлов токенов, совместимых с CLIProxyAPI v6
+- Опциональная загрузка в интерфейс управления CPA
 
-## 配置文件
+## Конфигурационный файл
 
-只提交示例文件：
+В репозитории доступен только пример файла:
 
 ```bash
 copy config.example.json config.json
 ```
 
-示例配置字段：
+Поля примера конфигурации:
 
 ```json
 {
   "total_accounts": 10,
   "concurrent_workers": 2,
   "headless": false,
-  "proxy": "http://127.0.0.1:7897",
-  "duckmail_api_base": "https://api.duckmail.sbs",
+  "proxy": "[http://127.0.0.1:7897](http://127.0.0.1:7897)",
+  "duckmail_api_base": "[https://api.duckmail.sbs](https://api.duckmail.sbs)",
   "duckmail_api_key": "",
-  "oauth_issuer": "https://auth.openai.com",
+  "oauth_issuer": "[https://auth.openai.com](https://auth.openai.com)",
   "oauth_client_id": "app_EMoamEEZ73f0CkXaXp7hrann",
   "oauth_redirect_uri": "http://localhost:1455/auth/callback",
   "upload_api_url": "http://localhost:8317/v0/management/auth-files",
@@ -41,34 +42,35 @@ copy config.example.json config.json
 }
 ```
 
-## 使用
+## Использование
 
 ```bash
 python protocol_keygen.py
 ```
 
-## 输出文件
+## Выходные файлы
 
-运行后会在本地生成：
+После запуска локально будут созданы:
 
 - `accounts.txt`
 - `registered_accounts.csv`
 - `ak.txt`
 - `rk.txt`
-- `codex_accounts_tokens/` 或你配置的 token 输出目录
+- `codex_accounts_tokens/` (или настроенный вами каталог для токенов)
 
-这些文件都应保留本地使用，不应提交到仓库。
+Все эти файлы предназначены для локального использования и не должны попадать в репозиторий.
 
-## 与原项目的差异
+## Отличия от оригинального проекта
 
-相比上游项目，本目录的核心改动是将邮箱接收能力切换为 DuckMail：
+По сравнению с вышестоящим проектом, ключевым изменением в данном каталоге является переход на использование DuckMail для работы с почтой:
 
-- 使用 `POST /accounts` 创建临时邮箱
-- 使用 `POST /token` 获取 DuckMail Bearer Token
-- 使用 `GET /messages` 和 `GET /messages/{id}` 轮询验证码邮件
+- Использование `POST /accounts` для создания временной почты
+- Использование `POST /token` для получения Bearer токена DuckMail
+- Использование `GET /messages` и `GET /messages/{id}` для циклического опроса писем с кодами подтверждения
 
-## CPA 使用说明
+## Инструкции по использованию с CPA
 
-- 生成的 token JSON 适配 CLIProxyAPI v6 命名格式
-- `refresh_token` 会一并保存，供 CPA 自动刷新 access token
-- 如果配置了 `upload_api_url`，脚本会自动上传生成的 auth file
+- Сгенерированные JSON-файлы адаптированы под формат именования CLIProxyAPI v6
+- `refresh_token` сохраняется вместе с остальными данными для автоматического обновления access токена в CPA
+- Если настроен `upload_api_url`, скрипт автоматически загрузит созданные файлы авторизации
+```
